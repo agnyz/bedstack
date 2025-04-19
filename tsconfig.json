@@ -38,8 +38,10 @@
       "@profiles/*": ["./src/profiles/*"],
       "@utils/*": ["./src/utils/*"],
       "@articles/*": ["./src/articles/*"],
+      "@comments/*": ["./src/comments/*"],
       "@tags/*": ["./src/tags/*"],
       "@errors": ["./src/errors.ts"],
+      "@constants": ["./src/constants.ts"],
       "@config": ["./src/config.ts"]
     },
     // "rootDirs": [],                                   /* Allow multiple folders to be treated as one when resolving modules. */

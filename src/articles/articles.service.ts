@@ -1,37 +1,66 @@
 import { AuthorizationError, BadRequestError } from '@/errors';
+import type { ProfilesRepository } from '@/profiles/profiles.repository';
 import { slugify } from '@/utils/slugify';
 import type { ArticlesRepository } from '@articles/articles.repository';
-import type {
-  ArticleInDb,
-  ArticleToCreate,
-  ArticleToCreateData,
-  ArticleToUpdateRequest,
-  ReturnedArticleList,
-  ReturnedArticleResponse,
-} from '@articles/articles.schema';
-import type { ProfilesService } from '@profiles/profiles.service';
 import type { TagsService } from '@tags/tags.service';
 import { NotFoundError } from 'elysia';
+import type {
+  Article,
+  ArticleRow,
+  CreateArticleInput,
+  UpdateArticleInput,
+} from './interfaces';
+import {
+  toDomain,
+  toNewArticleRow,
+  toResponse,
+} from './mappers/articles.mapper';
 
 export class ArticlesService {
   constructor(
     private readonly repository: ArticlesRepository,
-    private readonly profilesService: ProfilesService,
+    private readonly profilesRepository: ProfilesRepository,
     private readonly tagsService: TagsService,
   ) {}
 
-  async find(query: {
-    currentUserId: number | null;
-    offset?: number;
-    limit?: number;
-    tag?: string;
-    author?: string;
-    favorited?: string;
-    followedAuthors?: boolean;
-  }): Promise<ReturnedArticleList> {
-    const limit = query.limit || 20;
-    const offset = query.offset || 0;
-    return await this.repository.find({ ...query, limit, offset });
+  async find(
+    filters: {
+      tag?: string;
+      author?: string;
+      favorited?: string;
+    },
+    options: {
+      pagination?: {
+        offset?: number;
+        limit?: number;
+      };
+      currentUserId?: number;
+      personalization?: {
+        /**
+         * Whether to include articles from followed authors. If not specified, all articles will be returned
+         */
+        followedAuthors?: boolean;
+      };
+    } = {},
+  ): Promise<{ articles: Article[]; articlesCount: number }> {
+    const { pagination, currentUserId, personalization } = options;
+    const { offset = 0, limit = 20 } = pagination ?? {};
+    const { followedAuthors } = personalization ?? {};
+    // TODO: should we check for currentUserId here, or throw an error?
+    const followedAuthorIds =
+      followedAuthors && currentUserId
+        ? await this.profilesRepository.findFollowedUserIds(currentUserId)
+        : undefined;
+    const { articles, articlesCount } = await this.repository.find(filters, {
+      offset,
+      limit,
+      currentUserId,
+      followedAuthorIds,
+    });
+    return {
+      articles: articles.map((article) => toDomain(article, { currentUserId })),
+      articlesCount,
+    };
   }
 
   async findBySlug(slug: string, currentUserId: number | null = null) {
@@ -39,32 +68,31 @@ export class ArticlesService {
     if (!article) {
       throw new NotFoundError('Article not found');
     }
-    return await this.generateArticleResponse(article, currentUserId);
+    return toDomain(article, { currentUserId });
   }
 
-  async createArticle(article: ArticleToCreateData, currentUserId: number) {
-    const articleToCreate: ArticleToCreate = {
-      ...article,
-      authorId: currentUserId,
-      slug: slugify(article.title),
-    };
-    // TODO: Add transaction to ensure both or none of the operations are done
-    const createdArticle = await this.repository.createArticle(articleToCreate);
+  async createArticle(article: CreateArticleInput, currentUserId: number) {
+    const newArticle = toNewArticleRow(article, currentUserId);
+
+    const createdArticle = await this.repository.createArticle(newArticle);
+
     if (!createdArticle) {
       throw new BadRequestError('Article was not created');
     }
-    if (article.tagList) {
+
+    if (article.tagList.length) {
       await this.tagsService.upsertArticleTags(
         createdArticle.id,
         article.tagList,
       );
     }
-    return await this.generateArticleResponse(createdArticle, currentUserId);
+
+    return toDomain(createdArticle, { currentUserId });
   }
 
   async updateArticle(
     slug: string,
-    article: ArticleToUpdateRequest,
+    article: UpdateArticleInput,
     currentUserId: number,
   ) {
     // TODO: Add transaction to ensure both or none of the operations are done
@@ -73,7 +101,7 @@ export class ArticlesService {
     if (!existingArticle) {
       throw new NotFoundError('Article not found');
     }
-    if (existingArticle.authorId !== currentUserId) {
+    if (existingArticle.author.id !== currentUserId) {
       throw new AuthorizationError('Only the author can update the article');
     }
 
@@ -98,7 +126,7 @@ export class ArticlesService {
     if (!article) {
       throw new NotFoundError('Article not found');
     }
-    if (article.authorId !== currentUserId) {
+    if (article.author.id !== currentUserId) {
       throw new AuthorizationError('Only the author can delete the article');
     }
 
@@ -110,45 +138,22 @@ export class ArticlesService {
     };
   }
 
-  async generateArticleResponse(
-    article: ArticleInDb,
-    currentUserId: number | null,
-  ): Promise<ReturnedArticleResponse> {
-    const authorProfile = await this.profilesService.generateProfileResponse(
-      article.author,
-      currentUserId,
-    );
-    return {
-      article: {
-        slug: article.slug,
-        title: article.title,
-        description: article.description,
-        body: article.body,
-        tagList: article.tags.map((tag) => tag.tagName),
-        createdAt: article.createdAt,
-        updatedAt: article.updatedAt,
-        author: authorProfile.profile,
-        favorited: !!article.favoritedBy.find(
-          (user) => user.userId === currentUserId,
-        ),
-        favoritesCount: article.favoritedBy.length,
-      },
-    };
-  }
-
   async favoriteArticle(slug: string, currentUserId: number) {
     const article = await this.repository.favoriteArticle(slug, currentUserId);
     if (!article) {
       throw new NotFoundError('Article not found');
     }
-    return await this.generateArticleResponse(article, currentUserId);
+    return toDomain(article, { currentUserId });
   }
 
   async unfavoriteArticle(slug: string, currentUserId: number) {
-    const article = await this.repository.unfavoriteArticle(slug, currentUserId);
+    const article = await this.repository.unfavoriteArticle(
+      slug,
+      currentUserId,
+    );
     if (!article) {
       throw new NotFoundError('Article not found');
     }
-    return await this.generateArticleResponse(article, currentUserId);
+    return toDomain(article, { currentUserId });
   }
 }

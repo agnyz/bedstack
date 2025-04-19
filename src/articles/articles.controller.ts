@@ -1,22 +1,16 @@
 import { setupArticles } from '@articles/articles.module';
-import {
-  ArticleFeedQuerySchema,
-  DeleteArticleResponse,
-  InsertArticleSchema,
-  ListArticlesQuerySchema,
-  ReturnedArticleListSchema,
-  ReturnedArticleResponseSchema,
-  UpdateArticleSchema,
-} from '@articles/articles.schema';
+import { CommentResponseDto, CreateCommentDto } from '@comments/dto';
 import { Elysia, t } from 'elysia';
 import {
-  AddCommentSchema,
-  DeleteCommentResponse,
-  ReturnedCommentResponse,
-  ReturnedCommentsResponse,
-} from './comments/comments.schema';
+  ArticleResponseDto,
+  ArticlesResponseDto,
+  CreateArticleDto,
+  ListArticlesQueryDto,
+  UpdateArticleDto,
+} from './dto';
+import { toCreateArticleInput, toResponse } from './mappers/articles.mapper';
 
-export const articlesPlugin = new Elysia().use(setupArticles).group(
+export const articlesController = new Elysia().use(setupArticles).group(
   '/articles',
   {
     detail: {
@@ -27,32 +21,47 @@ export const articlesPlugin = new Elysia().use(setupArticles).group(
     app
       .get(
         '/',
-        async ({ query, store, request }) =>
-          store.articlesService.find({
-            ...query,
-            currentUserId: await store.authService.getOptionalUserIdFromHeader(
+        async ({ query, store, request }) => {
+          const currentUserId =
+            await store.authService.getOptionalUserIdFromHeader(
               request.headers,
-            ),
-          }),
+            );
+
+          // TODO: should we assign the defaults here, in the service, or both?
+          const { offset = 0, limit = 20, tag, author, favorited } = query;
+
+          const { articles, articlesCount } = await store.articlesService.find(
+            { tag, author, favorited },
+            { pagination: { offset, limit }, currentUserId },
+          );
+
+          return {
+            articles: articles.map((article) => toResponse(article)),
+            articlesCount,
+          };
+        },
         {
-          query: ListArticlesQuerySchema,
-          response: ReturnedArticleListSchema,
-          detail: {
-            summary: 'List Articles',
-          },
+          query: ListArticlesQueryDto,
+          response: ArticlesResponseDto,
+          detail: { summary: 'List Articles' },
         },
       )
       .post(
         '/',
-        async ({ body, request, store }) =>
-          store.articlesService.createArticle(
-            body.article,
-            await store.authService.getUserIdFromHeader(request.headers),
-          ),
+        async ({ body, request, store }) => {
+          const currentUserId = await store.authService.getUserIdFromHeader(
+            request.headers,
+          );
+          const article = await store.articlesService.createArticle(
+            toCreateArticleInput(body.article),
+            currentUserId,
+          );
+          return toResponse(article);
+        },
         {
           beforeHandle: app.store.authService.requireLogin,
-          body: InsertArticleSchema,
-          response: ReturnedArticleResponseSchema,
+          body: CreateArticleDto,
+          response: ArticleResponseDto,
           detail: {
             summary: 'Create Article',
             security: [
@@ -65,20 +74,36 @@ export const articlesPlugin = new Elysia().use(setupArticles).group(
       )
       .get(
         '/feed',
-        async ({ query, store, request }) =>
-          store.articlesService.find({
-            ...query,
-            currentUserId: await store.authService.getUserIdFromHeader(
-              request.headers,
-            ),
-            followedAuthors: true,
-          }),
+        async ({ query, store, request }) => {
+          const currentUserId = await store.authService.getUserIdFromHeader(
+            request.headers,
+          );
+
+          // TODO: should we assign the defaults here, in the service, or both?
+          const { offset = 0, limit = 20, tag, author, favorited } = query;
+
+          // TODO: do we need both currentUserId and personalization?
+          const { articles, articlesCount } = await store.articlesService.find(
+            { tag, author, favorited },
+            {
+              personalization: {
+                followedAuthors: true,
+              },
+              pagination: { offset, limit },
+              currentUserId,
+            },
+          );
+          return {
+            articles: articles.map((article) => toResponse(article)),
+            articlesCount,
+          };
+        },
         {
           beforeHandle: app.store.authService.requireLogin,
-          query: ArticleFeedQuerySchema,
-          response: ReturnedArticleListSchema,
+          query: ListArticlesQueryDto,
+          response: ArticlesResponseDto,
           detail: {
-            summary: 'Artifle Feed',
+            summary: 'Article Feed',
             security: [
               {
                 tokenAuth: [],
@@ -89,15 +114,17 @@ export const articlesPlugin = new Elysia().use(setupArticles).group(
       )
       .get(
         '/:slug',
-        async ({ params, store, request }) =>
-          store.articlesService.findBySlug(
+        async ({ params, store, request }) => {
+          const article = await store.articlesService.findBySlug(
             params.slug,
             await store.authService.getOptionalUserIdFromHeader(
               request.headers,
             ),
-          ),
+          );
+          return toResponse(article);
+        },
         {
-          response: ReturnedArticleResponseSchema,
+          response: ArticleResponseDto,
           detail: {
             summary: 'Get Article',
           },
@@ -105,16 +132,18 @@ export const articlesPlugin = new Elysia().use(setupArticles).group(
       )
       .put(
         '/:slug',
-        async ({ params, body, store, request }) =>
-          store.articlesService.updateArticle(
+        async ({ params, body, store, request }) => {
+          const article = await store.articlesService.updateArticle(
             params.slug,
             body.article,
             await store.authService.getUserIdFromHeader(request.headers),
-          ),
+          );
+          return toResponse(article);
+        },
         {
           beforeHandle: app.store.authService.requireLogin,
-          body: UpdateArticleSchema,
-          response: ReturnedArticleResponseSchema,
+          body: UpdateArticleDto,
+          response: ArticleResponseDto,
           detail: {
             summary: 'Update Article',
             security: [
@@ -127,14 +156,34 @@ export const articlesPlugin = new Elysia().use(setupArticles).group(
       )
       .delete(
         '/:slug',
-        async ({ params, store, request }) =>
-          store.articlesService.deleteArticle(
+        async ({ params, store, request }) => {
+          await store.articlesService.deleteArticle(
             params.slug,
             await store.authService.getUserIdFromHeader(request.headers),
-          ),
+          );
+        },
         {
           beforeHandle: app.store.authService.requireLogin,
-          response: DeleteArticleResponse,
+          detail: {
+            summary: 'Delete Article',
+            security: [
+              {
+                tokenAuth: [],
+              },
+            ],
+          },
+        },
+      )
+      .delete(
+        '/:slug',
+        async ({ params, store, request }) => {
+          await store.articlesService.deleteArticle(
+            params.slug,
+            await store.authService.getUserIdFromHeader(request.headers),
+          );
+        },
+        {
+          beforeHandle: app.store.authService.requireLogin,
           detail: {
             summary: 'Delete Article',
             security: [
@@ -157,11 +206,8 @@ export const articlesPlugin = new Elysia().use(setupArticles).group(
         },
         {
           beforeHandle: app.store.authService.requireLogin,
-          params: t.Object({
-            slug: t.String(),
-          }),
-          body: AddCommentSchema,
-          response: ReturnedCommentResponse,
+          body: CreateCommentDto,
+          response: CommentResponseDto,
           detail: {
             summary: 'Add Comment to Article',
           },
@@ -181,10 +227,9 @@ export const articlesPlugin = new Elysia().use(setupArticles).group(
           };
         },
         {
-          params: t.Object({
-            slug: t.String(),
+          response: t.Object({
+            comments: t.Array(CommentResponseDto),
           }),
-          response: ReturnedCommentsResponse,
           detail: {
             summary: 'Get Comments from Article',
           },
@@ -198,7 +243,6 @@ export const articlesPlugin = new Elysia().use(setupArticles).group(
             Number.parseInt(params.id, 10),
             await store.authService.getUserIdFromHeader(request.headers),
           );
-          return {};
         },
         {
           beforeHandle: app.store.authService.requireLogin,
@@ -206,7 +250,6 @@ export const articlesPlugin = new Elysia().use(setupArticles).group(
             slug: t.String(),
             id: t.String(),
           }),
-          response: DeleteCommentResponse,
           detail: {
             summary: 'Delete Comment',
           },
@@ -214,14 +257,16 @@ export const articlesPlugin = new Elysia().use(setupArticles).group(
       )
       .post(
         '/:slug/favorite',
-        async ({ params, store, request }) =>
-          store.articlesService.favoriteArticle(
+        async ({ params, store, request }) => {
+          const article = await store.articlesService.favoriteArticle(
             params.slug,
             await store.authService.getUserIdFromHeader(request.headers),
-          ),
+          );
+          return toResponse(article);
+        },
         {
           beforeHandle: app.store.authService.requireLogin,
-          response: ReturnedArticleResponseSchema,
+          response: ArticleResponseDto,
           detail: {
             summary: 'Favorite Article',
             security: [
@@ -234,14 +279,16 @@ export const articlesPlugin = new Elysia().use(setupArticles).group(
       )
       .delete(
         '/:slug/favorite',
-        async ({ params, store, request }) =>
-          store.articlesService.unfavoriteArticle(
+        async ({ params, store, request }) => {
+          const article = await store.articlesService.unfavoriteArticle(
             params.slug,
             await store.authService.getUserIdFromHeader(request.headers),
-          ),
+          );
+          return toResponse(article);
+        },
         {
           beforeHandle: app.store.authService.requireLogin,
-          response: ReturnedArticleResponseSchema,
+          response: ArticleResponseDto,
           detail: {
             summary: 'Unfavorite Article',
             security: [

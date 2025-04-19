@@ -97,7 +97,7 @@ export class AuthService {
       const user = await this.getUserFromHeaders(headers);
       return user.id;
     } catch (error) {
-      if (error instanceof AuthenticationError) return null;
+      if (error instanceof AuthenticationError) return undefined;
       throw error;
     }
   };

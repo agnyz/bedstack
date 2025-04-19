@@ -1,106 +1,74 @@
-import { MAX_PAGINATION_LIMIT } from '@/constants';
-import type { Profile } from '@profiles/profiles.schema';
-import { type Static, Type } from '@sinclair/typebox';
-import type { ArticleTag } from '@tags/tags.schema';
-import { createInsertSchema, createSelectSchema } from 'drizzle-typebox';
-import { articles, type favoriteArticles } from './articles.model';
+// Unified schema for articles feature
+import { users } from '@/users/users.model';
+import { articleTags } from '@tags/tags.model';
+import { relations } from 'drizzle-orm';
+import {
+  integer,
+  primaryKey,
+  serial,
+  pgTable as table,
+  text,
+  timestamp,
+} from 'drizzle-orm/pg-core';
+import { comments } from '../comments/schema';
 
-export const insertArticleSchemaRaw = createInsertSchema(articles);
-export const selectArticleSchemaRaw = createSelectSchema(articles);
-
-export const InsertArticleSchema = Type.Object({
-  article: Type.Composite([
-    Type.Pick(insertArticleSchemaRaw, ['title', 'description', 'body']),
-    Type.Object({ tagList: Type.Optional(Type.Array(Type.String())) }),
-  ]),
+export const articles = table('articles', {
+  id: serial('id').primaryKey(),
+  slug: text('slug').notNull().unique(),
+  title: text('title').notNull(),
+  description: text('description').notNull(),
+  body: text('body').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  authorId: integer('author_id')
+    .references(() => users.id, { onDelete: 'cascade' })
+    .notNull(),
 });
 
-export type ArticleToCreateData = Static<typeof InsertArticleSchema>['article'];
-export type ArticleToCreate = Omit<ArticleToCreateData, 'tagList'> & {
-  authorId: number;
-  slug: string;
-};
+export const favoriteArticles = table(
+  'favorite_articles',
+  {
+    articleId: integer('article_id')
+      .references(() => articles.id, { onDelete: 'cascade' })
+      .notNull(),
+    userId: integer('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.articleId, table.userId] })],
+);
 
-export const UpdateArticleSchema = Type.Object({
-  article: Type.Composite([
-    Type.Partial(
-      Type.Pick(insertArticleSchemaRaw, ['title', 'description', 'body']),
-    ),
-    Type.Object({
-      tagList: Type.Optional(Type.Array(Type.String())),
-    }),
-  ]),
-});
-
-export type ArticleToUpdateRequest = Static<
-  typeof UpdateArticleSchema
->['article'];
-export type ArticleToUpdate = Omit<ArticleToUpdateRequest, 'tagList'> & {
-  slug: string;
-};
-
-export const ReturnedArticleSchema = Type.Composite([
-  Type.Omit(selectArticleSchemaRaw, ['id', 'authorId']),
-  Type.Object({
-    author: Type.Object({
-      username: Type.String(),
-      bio: Type.String(),
-      image: Type.String(),
-      following: Type.Boolean(),
-    }),
-    favorited: Type.Boolean(),
-    favoritesCount: Type.Number(),
+export const articleRelations = relations(articles, ({ one, many }) => ({
+  author: one(users, {
+    fields: [articles.authorId],
+    references: [users.id],
+    relationName: 'author',
   }),
-  Type.Object({ tagList: Type.Array(Type.String()) }),
-]);
-
-export const ReturnedArticleResponseSchema = Type.Object({
-  article: ReturnedArticleSchema,
-});
-
-export type ReturnedArticle = Static<typeof ReturnedArticleSchema>;
-export type ReturnedArticleResponse = Static<
-  typeof ReturnedArticleResponseSchema
->;
-
-export type ArticleInDb = Omit<
-  typeof articles.$inferSelect,
-  'id' | 'authorId'
-> & {
-  author: Profile;
-  favoritedBy: ArticleFavoritedBy[];
-  tags: ArticleTag[];
-};
-
-export type ArticleFavoritedBy = typeof favoriteArticles.$inferSelect;
-
-export const ArticleFeedQuerySchema = Type.Object({
-  limit: Type.Optional(
-    Type.Number({
-      minimum: 1,
-      maximum: MAX_PAGINATION_LIMIT,
-      default: 20,
-    }),
-  ),
-  offset: Type.Optional(Type.Number({ minimum: 0, default: 0 })),
-});
-export const ListArticlesQuerySchema = Type.Composite([
-  ArticleFeedQuerySchema,
-  Type.Object({
-    tag: Type.Optional(Type.String()),
-    author: Type.Optional(Type.String()),
-    favorited: Type.Optional(Type.String()),
+  favoritedBy: many(favoriteArticles, {
+    relationName: 'favoriteArticle',
   }),
-]);
+  comments: many(comments, {
+    relationName: 'articleComments',
+  }),
+  tags: many(articleTags, {
+    relationName: 'articleTags',
+  }),
+}));
 
-export const ReturnedArticleListSchema = Type.Object({
-  articles: Type.Array(Type.Omit(ReturnedArticleSchema, ['body'])),
-  articlesCount: Type.Number(),
-});
-
-export type ReturnedArticleList = Static<typeof ReturnedArticleListSchema>;
-
-export const DeleteArticleResponse = Type.Object({
-  message: Type.String(),
-  slug: Type.String(),
-});
+export const favoriteArticleRelations = relations(
+  favoriteArticles,
+  ({ one }) => ({
+    article: one(articles, {
+      fields: [favoriteArticles.articleId],
+      references: [articles.id],
+      relationName: 'favoriteArticle',
+    }),
+    user: one(users, {
+      fields: [favoriteArticles.userId],
+      references: [users.id],
+      relationName: 'favoritedBy',
+    }),
+  }),
+);

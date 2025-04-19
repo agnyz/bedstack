@@ -1,4 +1,4 @@
-import { articles } from '@articles/articles.model';
+import { articles } from '@/articles/schema/favorite-articles.schema';
 import { relations } from 'drizzle-orm';
 import {
   integer,

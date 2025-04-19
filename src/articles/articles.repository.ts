@@ -1,47 +1,41 @@
-import type {
-  ArticleToCreate,
-  ArticleToUpdate,
-} from '@/articles/articles.schema';
 import type { Database } from '@/database.providers';
-import { userFollows, users } from '@/users/users.model';
-import { articles, favoriteArticles } from '@articles/articles.model';
 import { articleTags } from '@tags/tags.model';
+import { userFollows, users } from '@users/users.model';
 import { and, count, desc, eq, inArray, sql } from 'drizzle-orm';
+import { articles, favoriteArticles } from './articles.schema';
+import type {
+  ArticleFeedRow,
+  ArticleRow,
+  NewArticleRow,
+  UpdateArticleRow,
+} from './interfaces';
 
 export class ArticlesRepository {
   constructor(private readonly db: Database) {}
 
-  async find({
-    currentUserId,
-    offset,
-    limit,
-    tag,
-    author,
-    favorited,
-    followedAuthors,
-  }: {
-    currentUserId: number | null;
-    offset: number;
-    limit: number;
-    tag?: string;
-    author?: string;
-    favorited?: string;
-    followedAuthors?: boolean;
-  }) {
+  async find(
+    filters: {
+      tag?: string;
+      author?: string;
+      favorited?: string;
+    },
+    options: {
+      offset: number;
+      limit: number;
+      currentUserId?: number;
+      followedAuthorIds?: number[];
+    },
+  ): Promise<{ articles: ArticleFeedRow[]; articlesCount: number }> {
+    const { author, tag, favorited } = filters;
+    const { offset, limit, currentUserId, followedAuthorIds } = options;
+
     const authorFilters = [];
     if (author) {
       authorFilters.push(eq(users.username, author));
     }
-    if (followedAuthors && currentUserId) {
-      authorFilters.push(
-        inArray(
-          users.id,
-          this.db
-            .select({ followedAuthors: userFollows.followedId })
-            .from(userFollows)
-            .where(eq(userFollows.followerId, currentUserId)),
-        ),
-      );
+
+    if (followedAuthorIds?.length) {
+      authorFilters.push(inArray(users.id, followedAuthorIds));
     }
 
     const authorsWithFollowersCTE = this.db.$with('authorsWithFollowers').as(
@@ -158,24 +152,22 @@ export class ArticlesRepository {
     return { articles: limitedResults, articlesCount: resultsCount[0].count };
   }
 
-  async findBySlug(slug: string) {
-    const result = await this.db.query.articles.findFirst({
-      where: eq(articles.slug, slug),
-      with: {
-        author: {
-          with: {
-            followers: true,
+  async findBySlug(slug: string): Promise<ArticleRow | null> {
+    return (
+      (await this.db.query.articles.findFirst({
+        where: eq(articles.slug, slug),
+        with: {
+          author: {
+            with: { followers: true },
           },
+          favoritedBy: true,
+          tags: true,
         },
-        favoritedBy: true,
-        tags: true,
-      },
-    });
-    if (!result) return null;
-    return result;
+      })) ?? null
+    );
   }
 
-  async findById(id: number) {
+  async findById(id: number): Promise<ArticleRow | null> {
     const result = await this.db.query.articles.findFirst({
       where: eq(articles.id, id),
       with: {
@@ -188,11 +180,10 @@ export class ArticlesRepository {
         tags: true,
       },
     });
-    if (!result) return null;
-    return result;
+    return result ?? null;
   }
 
-  async createArticle(article: ArticleToCreate) {
+  async createArticle(article: NewArticleRow) {
     const results = await this.db.insert(articles).values(article).returning();
     const newArticle = results[0];
     return this.findById(newArticle.id);
@@ -200,7 +191,7 @@ export class ArticlesRepository {
 
   async updateArticle(
     articleId: number,
-    article: ArticleToUpdate,
+    article: UpdateArticleRow,
     currentUserId: number,
   ) {
     const filteredArticle = Object.fromEntries(

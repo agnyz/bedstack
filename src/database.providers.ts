@@ -1,4 +1,5 @@
-import * as articlesSchema from '@articles/articles.model';
+import * as articlesSchema from '@articles/articles.schema';
+import * as commentsSchema from '@comments/schema';
 import { dbCredentialsString } from '@db/config';
 import * as tagsSchema from '@tags/tags.model';
 import * as usersSchema from '@users/users.model';
@@ -10,7 +11,12 @@ export const migrationsClient = postgres(dbCredentialsString, { max: 1 });
 export const queryClient = postgres(dbCredentialsString);
 
 export const db = drizzle(queryClient, {
-  schema: { ...usersSchema, ...articlesSchema, ...tagsSchema },
+  schema: {
+    ...usersSchema,
+    ...articlesSchema,
+    ...tagsSchema,
+    ...commentsSchema,
+  },
   logger: true,
 });
 export type Database = typeof db;

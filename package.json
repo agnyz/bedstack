@@ -27,7 +27,7 @@
   },
   "dependencies": {
     "@elysiajs/swagger": "^1.2.2",
-    "drizzle-orm": "^0.41.0",
+    "drizzle-orm": "^0.42.0",
     "drizzle-typebox": "^0.3.0",
     "elysia": "^1.2.25",
     "jose": "^6.0.9",
@@ -38,7 +38,7 @@
     "@faker-js/faker": "^9.6.0",
     "@types/node": "^22.13.10",
     "bun-types": "latest",
-    "drizzle-kit": "^0.30.5",
+    "drizzle-kit": "^0.31.0",
     "pg": "^8.13.3",
     "vitepress": "^1.6.3",
     "typescript": "^5.8.2"

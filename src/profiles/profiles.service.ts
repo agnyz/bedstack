@@ -1,87 +1,73 @@
 import type { ProfilesRepository } from '@profiles/profiles.repository';
-import type { ParsedProfileSchema, Profile } from '@profiles/profiles.schema';
 import { NotFoundError } from 'elysia';
+import type { IProfile } from './interfaces';
+import { toDomain } from './mappers';
 
 // TODO: We used to have a UsersRepository here, but it was removed. Why?
 export class ProfilesService {
   constructor(private readonly repository: ProfilesRepository) {}
 
-  async findByUsername(currentUserId: number, targetUsername: string) {
-    const user = await this.repository.findByUsername(targetUsername);
-    if (!user) {
+  async findProfileByUsername(
+    currentUserId: number | null,
+    targetUsername: string,
+  ): Promise<IProfile> {
+    const profile = await this.repository.findProfileByUsername(targetUsername);
+    if (!profile) {
       throw new NotFoundError('Profile not found');
     }
-    return await this.generateProfileResponse(user, currentUserId);
+    return toDomain(profile, currentUserId);
   }
 
-  async findByUserId(currentUserId: number | null, targetUserId: number) {
-    const user = await this.repository.findByUserId(targetUserId);
-    if (!user) {
+  async findProfileByUserId(
+    currentUserId: number | null,
+    targetUserId: number,
+  ): Promise<IProfile> {
+    const profile = await this.repository.findProfileByUserId(targetUserId);
+    if (!profile) {
       throw new NotFoundError('Profile not found');
     }
-    return await this.generateProfileResponse(user, currentUserId);
+    return toDomain(profile, currentUserId);
   }
 
-  async followUser(
-    username: string,
-    currentUserId: number,
-  ): Promise<ParsedProfileSchema> {
-    const userToFollow = await this.repository.findByUsername(username);
-    if (!userToFollow) {
-      throw new NotFoundError('User not found');
+  async followUser(username: string, currentUserId: number): Promise<IProfile> {
+    const profileToFollow =
+      await this.repository.findProfileByUsername(username);
+    if (!profileToFollow) {
+      throw new NotFoundError('Profile not found');
     }
 
     // Check if already following
     const isFollowing = await this.repository.findFollowByUsers(
-      userToFollow.id,
+      profileToFollow.id,
       currentUserId,
     );
     if (!isFollowing) {
-      await this.repository.followUser(currentUserId, userToFollow.id);
+      await this.repository.followUser(currentUserId, profileToFollow.id);
     }
 
-    return this.findByUsername(currentUserId, username);
+    return this.findProfileByUsername(currentUserId, username);
   }
 
   async unfollowUser(
     username: string,
     currentUserId: number,
-  ): Promise<ParsedProfileSchema> {
-    const userToUnfollow = await this.repository.findByUsername(username);
-    if (!userToUnfollow) {
-      throw new NotFoundError('User not found');
+  ): Promise<IProfile> {
+    const profileToUnfollow =
+      await this.repository.findProfileByUsername(username);
+    if (!profileToUnfollow) {
+      throw new NotFoundError('Profile not found');
     }
 
     // Check if following before attempting to unfollow
     const isFollowing = await this.repository.findFollowByUsers(
-      userToUnfollow.id,
+      profileToUnfollow.id,
       currentUserId,
     );
     if (isFollowing) {
-      await this.repository.unfollowUser(currentUserId, userToUnfollow.id);
+      await this.repository.unfollowUser(currentUserId, profileToUnfollow.id);
     }
 
-    return this.findByUsername(currentUserId, username);
-  }
-
-  // TODO: This should be a mapper, not a service method
-  async generateProfileResponse(
-    user: Profile,
-    currentUserId: number | null,
-  ): Promise<ParsedProfileSchema> {
-    return {
-      profile: {
-        bio: user.bio,
-        image: user.image,
-        username: user.username,
-        following:
-          currentUserId == null
-            ? false
-            : user.followers.some(
-                (follower) => follower.followerId === currentUserId,
-              ),
-      },
-    };
+    return this.findProfileByUsername(currentUserId, username);
   }
 
   async findFollowedUserIds(currentUserId: number): Promise<number[]> {

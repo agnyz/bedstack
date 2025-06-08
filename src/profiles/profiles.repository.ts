@@ -1,11 +1,15 @@
 import type { Database } from '@/database.providers';
+import type { UserFollowRow } from '@users/interfaces';
 import { userFollows, users } from '@users/users.model';
 import { and, eq } from 'drizzle-orm';
+import type { ProfileRow } from './interfaces';
 
 export class ProfilesRepository {
   constructor(private readonly db: Database) {}
 
-  async findByUsername(targetUsername: string) {
+  async findProfileByUsername(
+    targetUsername: string,
+  ): Promise<ProfileRow | null> {
     const result = await this.db.query.users.findMany({
       where: eq(users.username, targetUsername),
       with: { followers: true },
@@ -16,7 +20,7 @@ export class ProfilesRepository {
     return result[0];
   }
 
-  async findByUserId(targetUserId: number) {
+  async findProfileByUserId(targetUserId: number): Promise<ProfileRow | null> {
     const result = await this.db.query.users.findMany({
       where: eq(users.id, targetUserId),
       with: { followers: true },
@@ -36,7 +40,10 @@ export class ProfilesRepository {
     return results.map((r) => r.followedId);
   }
 
-  async followUser(currentUserId: number, userToFollow: number) {
+  async followUser(
+    currentUserId: number,
+    userToFollow: number,
+  ): Promise<UserFollowRow> {
     const result = await this.db
       .insert(userFollows)
       .values({ followedId: userToFollow, followerId: currentUserId })
@@ -44,7 +51,10 @@ export class ProfilesRepository {
     return result[0];
   }
 
-  async unfollowUser(currentUserId: number, userToUnfollow: number) {
+  async unfollowUser(
+    currentUserId: number,
+    userToUnfollow: number,
+  ): Promise<UserFollowRow | undefined> {
     const result = await this.db
       .delete(userFollows)
       .where(

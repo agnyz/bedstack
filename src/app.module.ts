@@ -6,11 +6,11 @@ import {
   BadRequestError,
   getErrorStatusFromCode,
 } from '@errors';
-import { profilesPlugin } from '@profiles/profiles.plugin';
 import { usersController } from '@users/users.controller';
 import { Elysia } from 'elysia';
 import { description, title, version } from '../package.json';
 import { commentsController } from './comments/comments.controller';
+import { profilesController } from './profiles/profiles.controller';
 import { tagsController } from './tags/tags.controller';
 
 // the file name is in the spirit of NestJS, where app module is the device in charge of putting together all the pieces of the app
@@ -59,7 +59,7 @@ export const setupApp = () => {
     .group('/api', (app) =>
       app
         .use(usersController)
-        .use(profilesPlugin)
+        .use(profilesController)
         .use(articlesController)
         .use(commentsController)
         .use(tagsController),

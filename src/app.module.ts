@@ -7,7 +7,7 @@ import {
   getErrorStatusFromCode,
 } from '@errors';
 import { profilesPlugin } from '@profiles/profiles.plugin';
-import { tagsPlugin } from '@tags/tags.plugin';
+import { tagsController } from '@tags/tags.controller';
 import { usersPlugin } from '@users/users.plugin';
 import { Elysia } from 'elysia';
 import { description, title, version } from '../package.json';
@@ -62,6 +62,6 @@ export const setupApp = () => {
         .use(profilesPlugin)
         .use(articlesController)
         .use(commentsController)
-        .use(tagsPlugin),
+        .use(tagsController),
     );
 };

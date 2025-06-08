@@ -1,5 +1,5 @@
 import { comments } from '@comments/comments.schema';
-import { articleTags } from '@tags/tags.model';
+import { articleTags } from '@tags/tags.schema';
 import { users } from '@users/users.model';
 import { relations } from 'drizzle-orm';
 import {

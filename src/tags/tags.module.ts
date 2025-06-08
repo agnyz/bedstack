@@ -1,7 +1,8 @@
 import { db } from '@/database.providers';
-import { TagsRepository } from '@tags/tags.repository';
-import { TagsService } from '@tags/tags.service';
 import { Elysia } from 'elysia';
+import { tagsController } from './tags.controller';
+import { TagsRepository } from './tags.repository';
+import { TagsService } from './tags.service';
 
 export const setupTags = () => {
   const tagsRepository = new TagsRepository(db);
@@ -10,3 +11,5 @@ export const setupTags = () => {
     tagsService,
   }));
 };
+
+export { tagsController };

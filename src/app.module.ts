@@ -7,11 +7,11 @@ import {
   getErrorStatusFromCode,
 } from '@errors';
 import { profilesPlugin } from '@profiles/profiles.plugin';
-import { tagsController } from '@tags/tags.controller';
-import { usersPlugin } from '@users/users.plugin';
+import { usersController } from '@users/users.controller';
 import { Elysia } from 'elysia';
 import { description, title, version } from '../package.json';
 import { commentsController } from './comments/comments.controller';
+import { tagsController } from './tags/tags.controller';
 
 // the file name is in the spirit of NestJS, where app module is the device in charge of putting together all the pieces of the app
 // see: https://docs.nestjs.com/modules
@@ -58,7 +58,7 @@ export const setupApp = () => {
     )
     .group('/api', (app) =>
       app
-        .use(usersPlugin)
+        .use(usersController)
         .use(profilesPlugin)
         .use(articlesController)
         .use(commentsController)

@@ -1,5 +1,4 @@
-import type { ArticleTagRow, TagRow } from '../interfaces/tag-row.interface';
-import type { IArticleTag, ITag } from '../interfaces/tag.interface';
+import type { ArticleTagRow, IArticleTag, ITag, TagRow } from '../interfaces';
 
 export const toDomain = (row: TagRow): ITag => ({
   name: row.name,

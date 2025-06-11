@@ -1,5 +1,5 @@
 import type { Database } from '@/database.providers';
-import { userFollows, users } from '@users/users.model';
+import { userFollows, users } from '@/users/users.schema';
 import { and, eq } from 'drizzle-orm';
 
 export class ProfilesRepository {

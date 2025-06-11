@@ -3,7 +3,7 @@ import {
   type FollowerSchema,
   type SelectUserSchema,
   selectUserSchemaRaw,
-} from '@users/users.schema';
+} from '@users/users.schema.legacy';
 
 export type Profile = Static<typeof SelectUserSchema> & {
   followers: FollowerSchema[];

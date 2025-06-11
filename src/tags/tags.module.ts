@@ -1,6 +1,5 @@
 import { db } from '@/database.providers';
 import { Elysia } from 'elysia';
-import { tagsController } from './tags.controller';
 import { TagsRepository } from './tags.repository';
 import { TagsService } from './tags.service';
 
@@ -11,5 +10,3 @@ export const setupTags = () => {
     tagsService,
   }));
 };
-
-export { tagsController };

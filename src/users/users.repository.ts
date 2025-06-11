@@ -1,6 +1,6 @@
 import type { Database } from '@/database.providers';
-import { users } from '@users/users.model';
-import type { UserToCreate, UserToUpdate } from '@users/users.schema';
+import { users } from '@/users/users.schema';
+import type { NewUserRow, UpdateUserRow, UserRow } from '@users/interfaces';
 import { eq } from 'drizzle-orm';
 
 export class UsersRepository {
@@ -48,7 +48,7 @@ export class UsersRepository {
     return result[0];
   }
 
-  async createUser(user: UserToCreate) {
+  async createUser(user: NewUserRow) {
     const newUser = await this.db
       .insert(users)
       .values(user)
@@ -58,7 +58,7 @@ export class UsersRepository {
     return newUser[0];
   }
 
-  async updateUser(id: number, user: UserToUpdate) {
+  async updateUser(id: number, user: UpdateUserRow) {
     const updatedUser = await this.db
       .update(users)
       .set(user)

@@ -1,53 +1,58 @@
-import { type Static, Type } from '@sinclair/typebox';
-// Do not use path aliases here (i.e. '@/users/users.model'), as that doesn't work with Drizzle Studio
-import { type userFollows, users } from '@users/users.model';
-import type { InferSelectModel } from 'drizzle-orm';
-import { createInsertSchema, createSelectSchema } from 'drizzle-typebox';
+import { articles, favoriteArticles } from '@articles/articles.schema';
+import { relations, sql } from 'drizzle-orm';
+import {
+  date,
+  integer,
+  pgTable,
+  primaryKey,
+  serial,
+  text,
+} from 'drizzle-orm/pg-core';
 
-// Schema for inserting a user - can be used to validate API requests
-export const insertUserSchemaRaw = createInsertSchema(users);
-export const InsertUserSchema = Type.Object({
-  user: Type.Omit(insertUserSchemaRaw, [
-    'id',
-    'createdAt',
-    'updatedAt',
-    'bio',
-    'image',
-  ]),
+export const users = pgTable('users', {
+  id: serial('id').primaryKey().notNull(),
+  email: text('email').notNull().unique(),
+  bio: text('bio').default('').notNull(),
+  image: text('image')
+    .default('https://api.realworld.io/images/smiley-cyrus.jpg')
+    .notNull(),
+  password: text('password').notNull(),
+  username: text('username').notNull().unique(),
+  createdAt: date('created_at').default(sql`CURRENT_DATE`).notNull(),
+  updatedAt: date('updated_at').default(sql`CURRENT_DATE`).notNull(),
 });
 
-export const UpdateUserSchema = Type.Object({
-  user: Type.Partial(
-    Type.Omit(insertUserSchemaRaw, ['id', 'createdAt', 'updatedAt']),
-  ),
-});
+export const userRelations = relations(users, ({ many }) => ({
+  followers: many(userFollows, { relationName: 'followed' }),
+  following: many(userFollows, { relationName: 'follower' }),
+  publishedArticles: many(articles, { relationName: 'author' }),
+  favoriteArticles: many(favoriteArticles, { relationName: 'favoritedBy' }),
+}));
 
-export const ReturnedUserSchema = Type.Object({
-  user: Type.Composite([
-    Type.Omit(insertUserSchemaRaw, [
-      'id',
-      'password',
-      'createdAt',
-      'updatedAt',
-    ]),
-    Type.Object({ token: Type.String() }),
-  ]),
-});
+export const userFollows = pgTable(
+  'user_follows',
+  {
+    followedId: integer('followed_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    followerId: integer('follower_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    createdAt: date('created_at').default(sql`CURRENT_DATE`).notNull(),
+    updatedAt: date('updated_at').default(sql`CURRENT_DATE`).notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.followedId, table.followerId] })],
+);
 
-export type UserToCreate = Static<typeof InsertUserSchema>['user'];
-export type UserToUpdate = Static<typeof UpdateUserSchema>['user'];
-export type UserInDb = typeof users.$inferSelect;
-export type User = Omit<UserInDb, 'password'>;
-
-export const UserLoginSchema = Type.Object({
-  user: Type.Object({
-    email: Type.String(),
-    password: Type.String(),
+export const userFollowsRelations = relations(userFollows, ({ one }) => ({
+  follower: one(users, {
+    fields: [userFollows.followerId],
+    references: [users.id],
+    relationName: 'follower',
   }),
-});
-
-// Schema for selecting a user - can be used to validate API responses
-export const selectUserSchemaRaw = createSelectSchema(users);
-export const SelectUserSchema = Type.Omit(selectUserSchemaRaw, ['password']);
-
-export type FollowerSchema = InferSelectModel<typeof userFollows>;
+  followed: one(users, {
+    fields: [userFollows.followedId],
+    references: [users.id],
+    relationName: 'followed',
+  }),
+}));

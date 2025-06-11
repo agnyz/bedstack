@@ -3,8 +3,8 @@ import {
   LoginUserDto,
   UpdateUserDto,
   UserResponseDto,
-} from '@users/dto';
-import { setupUsers } from '@users/users.module';
+} from '@/users/dto';
+import { setupUsers } from '@/users/users.module';
 import { Elysia } from 'elysia';
 
 /**

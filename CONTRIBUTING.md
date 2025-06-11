@@ -9,9 +9,9 @@ Hey there! We're thrilled that you'd like to contribute to this project. Your he
 
 This project uses [Bun](https://bun.sh) as a runtime as well as a package manager. It's a modern, fast, and lightweight alternative to [Node.js](https://nodejs.org/en/) and [npm](https://www.npmjs.com/). To install Bun on POSIX systems (like Ubuntu or macOS), run the following command:
 
-  ```sh
-  curl -fsSL https://bun.sh/install | bash
-  ```
+```sh
+curl -fsSL https://bun.sh/install | bash
+```
 
 Otherwise, visit the [Bun installation page](https://bun.sh/docs/installation) for installation options.
 
@@ -27,7 +27,7 @@ Build the project for production. The result is under `dist/`.
 
 ### `bun check`
 
-We use [Biome](https://biomejs.dev/) for **both linting and formatting**. It is an ultra-fast, Rust based linter and formatter. 
+We use [Biome](https://biomejs.dev/) for **both linting and formatting**. It is an ultra-fast, Rust based linter and formatter.
 It also lints JSON.
 
 You can also run `bun fix` to apply any safe fixes automatically.
@@ -69,8 +69,9 @@ Where the template is:
 ```
 
 Replacing:
-* `<keyword>` with one of `close`, `closes`, `closed`, `fix`, `fixes`, `fixed`, `resolve`, `resolves`, `resolved`
-* `<issue-number>`: the issue number you are fixing
+
+- `<keyword>` with one of `close`, `closes`, `closed`, `fix`, `fixes`, `fixed`, `resolve`, `resolves`, `resolved`
+- `<issue-number>`: the issue number you are fixing
 
 This will let GitHub know the issues are linked, and automatically close them once the PR gets merged. Learn more at [the guide](https://docs.github.com/en/issues/tracking-your-work-with-issues/linking-a-pull-request-to-an-issue#linking-a-pull-request-to-an-issue-using-a-keyword).
 

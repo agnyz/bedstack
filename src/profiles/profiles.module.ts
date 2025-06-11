@@ -1,7 +1,7 @@
-import { db } from '@/database.providers';
-import { AuthService } from '@auth/auth.service';
-import { ProfilesRepository } from '@profiles/profiles.repository';
-import { ProfilesService } from '@profiles/profiles.service';
+import { AuthService } from '@/auth/auth.service';
+import { db } from '@/database/database.providers';
+import { ProfilesRepository } from '@/profiles/profiles.repository';
+import { ProfilesService } from '@/profiles/profiles.service';
 import { Elysia } from 'elysia';
 
 export const setupProfiles = () => {

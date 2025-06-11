@@ -1,9 +1,12 @@
-import { env } from '@config';
-import { AuthenticationError } from '@errors';
+import { isHttpError } from '@/common/errors';
+import { RealWorldError } from '@/common/errors';
+import type { UserRow } from '@/users/interfaces';
 import { Type } from '@sinclair/typebox';
 import { Value } from '@sinclair/typebox/value';
-import type { UserRow } from '@users/interfaces';
+import { Elysia, error } from 'elysia';
+import { StatusCodes } from 'http-status-codes';
 import * as jose from 'jose';
+import { env } from '../../env.config';
 
 export class AuthService {
   private readonly ALG = env.JWT_ALGORITHM;
@@ -54,10 +57,10 @@ export class AuthService {
       });
     } catch (err) {
       console.error(err);
-      throw new AuthenticationError('Invalid token');
+      throw error(StatusCodes.UNAUTHORIZED, 'Invalid token');
     }
     if (!Value.Check(this.VerifiedJwtSchema, verifiedToken))
-      throw new AuthenticationError('Invalid token');
+      throw error(StatusCodes.UNAUTHORIZED, 'Invalid token');
     const userToken = Value.Cast(this.VerifiedJwtSchema, verifiedToken);
     return userToken;
   };
@@ -65,14 +68,17 @@ export class AuthService {
   getUserFromHeaders = async (headers: Headers) => {
     const rawHeader = headers.get('Authorization');
     if (!rawHeader)
-      throw new AuthenticationError('Missing authorization header');
+      // throw error(StatusCodes.UNAUTHORIZED, 'Missing authorization header');
+      throw new RealWorldError(StatusCodes.UNAUTHORIZED, {
+        Authorization: ['is missing'],
+      });
 
     const tokenParts = rawHeader?.split(' ');
     const tokenType = tokenParts?.[0];
     if (tokenType !== 'Token')
-      throw new AuthenticationError(
-        "Invalid token type. Expected header format: 'Token jwt'",
-      );
+      throw new RealWorldError(StatusCodes.UNAUTHORIZED, {
+        token: ['is invalid. Expected header format: "Token jwt"'],
+      });
 
     const token = tokenParts?.[1];
     const userToken = await this.verifyToken(token);
@@ -97,7 +103,9 @@ export class AuthService {
       const user = await this.getUserFromHeaders(headers);
       return user.id;
     } catch (error) {
-      if (error instanceof AuthenticationError) return undefined;
+      // if it's an auth error, return undefined
+      if (isHttpError(error) && error.code === StatusCodes.UNAUTHORIZED)
+        return undefined;
       throw error;
     }
   };

@@ -17,7 +17,12 @@ export function toResponse(article: IArticle): ArticleResponseDto {
       tagList: article.tagList,
       createdAt: article.createdAt.toISOString(),
       updatedAt: article.updatedAt.toISOString(),
-      author: authorProfile,
+      author: {
+        username: authorProfile.username,
+        bio: authorProfile.bio ?? '',
+        image: authorProfile.image ?? '',
+        following: authorProfile.following,
+      },
       favorited: article.favorited,
       favoritesCount: article.favoritesCount,
     },

@@ -8,55 +8,90 @@ We follow a **one file per thing** rule to maintain clear organization.
 
 ```plaintext
 src/
-├── app.ts                   # Initializes and mounts the app
-├── routes/                  # Aggregates and mounts feature routers
-├── db/                      # Drizzle ORM config and database init
-├── shared/                  # Common utilities and helpers
-├── articles/                # Full article feature module
-├── comments/                # Full comment feature module
-├── tags/                    # Tag-related logic and schema
-├── users/                   # User logic (repo, profile dto)
+├── app.module.ts         # Main module that composes all features
+├── database.providers.ts # Database providers
+├── main.ts               # Entry point
+├── ...resources/         # All resource modules directly under `src/`
+├── common/               # Common constants, interfaces, and utilities\
+scripts/                  # Scripts managed by `package.json`
+drizzle/                  # Drizzle migrations and scripts
+drizzle.config.ts         # Drizzle configuration
+biome.json                # Biome configuration
+package.json              # Package metadata
+bun.lockb                 # Bun lockfile
+tsconfig.json             # TypeScript configuration
+...markdown files         # Documentation
+...git files              # `.git/`, `.gitignore`, etc.
+...docker files           # `docker-compose.yml`, `Dockerfile`, etc.
+.env*                     # `.env`, `.env.example`, etc.
+env.config.ts             # Environment variables configuration
 ```
 
-## Feature Folder Layout
+> [!NOTE]
+> The `app.module.ts` file is named in the spirit of NestJS, where the app module is the device in charge of putting together all the pieces of the application. See [NestJS Modules](https://docs.nestjs.com/modules) for more details.
 
-Each feature (e.g. `articles/`, `comments/`) uses this layout:
+## Folders Inside `src/`
+
+### Resource Modules (`articles/`, `comments/`, etc.)
+
+Each resource module uses this layout:
 
 ```plaintext
-feature/
-├── feature.controller.ts       # REST handler logic
-├── feature.service.ts          # Business logic
-├── feature.repository.ts       # DB access logic
-├── feature.mapper.ts           # Converts DB to DTO
+resource/
+├── resources.controller.ts       # REST handler logic
+├── resources.service.ts          # Business logic
+├── resources.repository.ts       # DB access logic
+├── resources.mapper.ts           # Converts DB to DTO
 ├── schema/
-│   └── feature.schema.ts       # Drizzle schema + optional relations
+│   └── resource.schema.ts       # Drizzle schema + optional relations
 ├── dto/
-│   ├── create-feature.dto.ts   # Input shape (TypeBox)
-│   ├── update-feature.dto.ts   # Input shape (if needed)
-│   └── feature.dto.ts          # Output DTO for response
+│   ├── create-resource.dto.ts   # Input shape (TypeBox)
+│   ├── update-resource.dto.ts   # Input shape (if needed)
+│   └── resource.dto.ts          # Output DTO for response
 ├── interfaces/
-│   ├── feature.interface.ts    # Domain model
-│   └── feature-row.interface.ts# Drizzle-inferred DB shape
+│   ├── resource.interface.ts    # Domain model
+│   └── resource-row.interface.ts# Drizzle-inferred DB shape
 ```
 
-## Folder-Level Purpose
+> [!NOTE]
+> Note the filename is written in plural form (`resources.controller.ts`, e.g. `articles.controller.ts`) in the spirit of NestJS.
 
-### `/db/`
+### Other Folders Inside `src/`
 
-- Drizzle config and init
-- Exports the db instance
+#### `database/`
+
+- Exports the db instance through `database.providers.ts`
 - Does **not** export db tables, these are found as schemas inside feature folders
+- Does **not** export Drizzle config and migrations, these are found in `drizzle.config.ts` and `drizzle/` (from the root of the project) respectively
 
-### `/shared/`
+#### `common/`
 
-Global utilities, middleware, and shared concerns.
+Global utilities, middleware, and common concerns.
 
 ```plaintext
-shared/
-├── auth-middleware.ts     # Extracts auth context
-├── http-errors.ts         # Shared error classes
-├── slugify.ts             # Utility for slug generation
+common/
+├── constants/                 # All global constants, grouped by domain
+│   ├── auth.constants.ts
+│   ├── validation.constants.ts
+│   └── realworld.constants.ts
+├── errors/                   # Global error types and helpers
+│   ├── realworld.error.ts    # RealWorld API-compliant base error class
+│   └── error.factory.ts      # Helpers for throwing structured errors
+├── interfaces/               # Global interfaces (not feature-specific)
+│   └── pagination.interface.ts
+├── utils/                    # Pure utility functions used app-wide
+│   ├── slugify.ts
+│   └── date.utils.ts
 ```
+
+> [!NOTE]
+> The `common/` folder is a catch-all for things that are not specific to a single feature. It's organized by purpose, not by type/domain. That's why it can have both `errors/` (domain) and `utils/` (type) folders.
+
+> [!WARNING]
+> Avoid dumping everything into `common/` by default. If a util, constant, or interface is only used in one feature - keep it inside that feature's folder. Promote it to `common/` only when it's reused.
+
+> [!TIP]
+> Only one `constants/` folder exists across the project - do not spread constants into individual features unless strictly private to that feature.
 
 ## Naming Conventions
 
@@ -80,7 +115,7 @@ shared/
 - May also define `relations()` in the same file unless very large
 - If split, name the second file `feature-relations.schema.ts`
 
-## See also
+## See Also
 
 - More on **Architecture** - see [Architecture](ARCHITECTURE.md)
 - **Contributing** - see [Developer's Guide](CONTRIBUTING.md)

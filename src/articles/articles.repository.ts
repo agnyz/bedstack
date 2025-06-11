@@ -1,6 +1,6 @@
-import type { Database } from '@/database.providers';
-import { articleTags } from '@tags/tags.schema';
-import { userFollows, users } from '@users/users.schema';
+import type { Database } from '@/database/database.providers';
+import { articleTags } from '@/tags/tags.schema';
+import { userFollows, users } from '@/users/users.schema';
 import { and, count, desc, eq, inArray, sql } from 'drizzle-orm';
 import { articles, favoriteArticles } from './articles.schema';
 import type {

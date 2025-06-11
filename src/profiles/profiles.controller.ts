@@ -1,6 +1,6 @@
-import { profileResponseSchema } from '@profiles/dto';
-import { toResponse } from '@profiles/mappers';
-import { setupProfiles } from '@profiles/profiles.module';
+import { profileResponseSchema } from '@/profiles/dto';
+import { toResponse } from '@/profiles/mappers';
+import { setupProfiles } from '@/profiles/profiles.module';
 import { Elysia } from 'elysia';
 
 export const profilesController = new Elysia().use(setupProfiles).group(

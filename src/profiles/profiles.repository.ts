@@ -1,6 +1,6 @@
-import type { Database } from '@/database.providers';
-import type { UserFollowRow } from '@users/interfaces';
-import { userFollows, users } from '@users/users.schema';
+import type { Database } from '@/database/database.providers';
+import type { UserFollowRow } from '@/users/interfaces';
+import { userFollows, users } from '@/users/users.schema';
 import { and, eq } from 'drizzle-orm';
 import type { ProfileRow } from './interfaces';
 

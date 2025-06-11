@@ -24,9 +24,9 @@ features:
   - title: Bun
     details: All-in-one JavaScript runtime & toolkit designed for speed, complete with a bundler, test runner, and Node.js-compatible package manager.
     link: https://bun.sh/
-    icon: 
+    icon:
       src: /bun-press-kit/logo-centered.svg
-    
+
   - title: ElysiaJS
     details: TypeScript framework supercharged by Bun with End-to-End Type Safety, unified type system and outstanding developer experience.
     link: https://elysiajs.com/
@@ -38,9 +38,7 @@ features:
     link: https://orm.drizzle.team/
     icon:
       src: /drizzle-logo.png
-
 ---
-
 
 <style>
 :root {

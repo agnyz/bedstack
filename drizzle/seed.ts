@@ -1,7 +1,7 @@
 import { exit } from 'node:process';
-import { db } from '@/database.providers';
+import { db } from '@/database/database.providers';
+import { users } from '@/users/users.schema';
 import { faker } from '@faker-js/faker';
-import { users } from '@users/users.schema';
 
 console.log('Truncating the user database');
 await db.delete(users);

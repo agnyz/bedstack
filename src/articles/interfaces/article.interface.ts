@@ -1,4 +1,4 @@
-import type { Profile } from '@profiles/profiles.schema';
+import type { IProfile } from '@/profiles/interfaces';
 
 export type IArticle = {
   id: number;
@@ -13,7 +13,7 @@ export type IArticle = {
   favoritesCount: number;
   // TODO: This is a hack. Just define the proper type in the profiles module and use it.
   author: Omit<
-    Profile,
+    IProfile,
     'followers' | 'id' | 'email' | 'password' | 'createdAt' | 'updatedAt'
   > & {
     following: boolean;

@@ -1,37 +1,48 @@
-import { articlesController } from '@articles/articles.controller';
-import { swagger } from '@elysiajs/swagger';
+import { articlesController } from '@/articles/articles.controller';
+import { commentsController } from '@/comments/comments.controller';
+import { DEFAULT_ERROR_MESSAGE } from '@/common/constants';
 import {
-  AuthenticationError,
-  AuthorizationError,
-  BadRequestError,
-  getErrorStatusFromCode,
-} from '@errors';
-import { usersController } from '@users/users.controller';
-import { Elysia } from 'elysia';
+  RealWorldError,
+  formatNotFoundError,
+  formatValidationError,
+  isElysiaError,
+} from '@/common/errors';
+import { profilesController } from '@/profiles/profiles.controller';
+import { tagsController } from '@/tags/tags.controller';
+import { usersController } from '@/users/users.controller';
+import { swagger } from '@elysiajs/swagger';
+import { Elysia, NotFoundError, ValidationError } from 'elysia';
+import { pick } from 'radashi';
 import { description, title, version } from '../package.json';
-import { commentsController } from './comments/comments.controller';
-import { profilesController } from './profiles/profiles.controller';
-import { tagsController } from './tags/tags.controller';
-
-// the file name is in the spirit of NestJS, where app module is the device in charge of putting together all the pieces of the app
-// see: https://docs.nestjs.com/modules
 
 /**
  * Add all plugins to the app
  */
 export const setupApp = () => {
   return new Elysia()
-    .error({
-      AUTHENTICATION: AuthenticationError,
-      AUTHORIZATION: AuthorizationError,
-      BAD_REQUEST: BadRequestError,
-    })
     .onError(({ error, code, set }) => {
-      set.status = getErrorStatusFromCode(code);
-      const errorType = 'type' in error ? error.type : 'internal';
+      // Manually thrown errors
+      if (error instanceof RealWorldError) {
+        set.status = error.statusCode;
+        return pick(error, ['errors']);
+      }
+      // Elysia validation errors (TypeBox based)
+      if (error instanceof ValidationError) {
+        return formatValidationError(error);
+      }
+
+      // Elysia not found errors
+      if (error instanceof NotFoundError) {
+        return formatNotFoundError(error);
+      }
+
+      // Generic error message
+      const reason = isElysiaError(error)
+        ? error.response
+        : DEFAULT_ERROR_MESSAGE;
       return {
         errors: {
-          [errorType]: 'message' in error ? error.message : 'An error occurred',
+          [code]: [reason],
         },
       };
     })

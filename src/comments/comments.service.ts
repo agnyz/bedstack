@@ -1,7 +1,8 @@
-import type { ArticlesService } from '@articles/articles.service';
-import { AuthorizationError, BadRequestError } from '@errors';
-import type { ProfilesService } from '@profiles/profiles.service';
+import type { ArticlesService } from '@/articles/articles.service';
+import { RealWorldError } from '@/common/errors';
+import type { ProfilesService } from '@/profiles/profiles.service';
 import { NotFoundError } from 'elysia';
+import { StatusCodes } from 'http-status-codes';
 import type { CommentsRepository } from './comments.repository';
 import type { IComment, NewCommentRow } from './interfaces';
 import { toDomain, toNewCommentRow } from './mappers';
@@ -87,19 +88,19 @@ export class CommentsService {
     const comment = await this.commentsRepository.findById(commentId);
 
     if (!comment) {
-      throw new BadRequestError(`Comment with id ${commentId} not found`);
+      throw new NotFoundError('comment');
     }
 
     if (comment.articleId !== article.id) {
-      throw new BadRequestError(
-        `Comment with id ${commentId} does not belong to article ${articleSlug}`,
-      );
+      throw new RealWorldError(StatusCodes.NOT_FOUND, {
+        comment: ['does not belong to article'],
+      });
     }
 
     if (comment.authorId !== userId) {
-      throw new AuthorizationError(
-        'You can only delete comments that you authored',
-      );
+      throw new RealWorldError(StatusCodes.FORBIDDEN, {
+        comment: ['not owned by user'],
+      });
     }
 
     await this.commentsRepository.delete(commentId, userId);

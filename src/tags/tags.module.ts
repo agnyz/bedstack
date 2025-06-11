@@ -1,4 +1,4 @@
-import { db } from '@/database.providers';
+import { db } from '@/database/database.providers';
 import { Elysia } from 'elysia';
 import { TagsRepository } from './tags.repository';
 import { TagsService } from './tags.service';

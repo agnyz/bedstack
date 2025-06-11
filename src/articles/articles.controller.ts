@@ -1,4 +1,4 @@
-import { setupArticles } from '@articles/articles.module';
+import { setupArticles } from '@/articles/articles.module';
 import { Elysia, t } from 'elysia';
 import {
   ArticleFeedQueryDto,

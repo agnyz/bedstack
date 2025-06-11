@@ -6,7 +6,7 @@ export const LoginUserDto = Type.Object({
       format: 'email',
       minLength: 3,
       maxLength: 255,
-      description: 'Valid email address',
+      description: 'must be a valid email address',
     }),
     password: Type.String(),
   }),

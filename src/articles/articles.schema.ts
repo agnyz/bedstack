@@ -1,6 +1,6 @@
-import { users } from '@/users/users.model';
-import { comments } from '@comments/schema';
+import { comments } from '@comments/comments.schema';
 import { articleTags } from '@tags/tags.model';
+import { users } from '@users/users.model';
 import { relations } from 'drizzle-orm';
 import {
   integer,

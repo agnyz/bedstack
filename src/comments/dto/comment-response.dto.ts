@@ -1,5 +1,4 @@
 import { type Static, Type } from '@sinclair/typebox';
-import { CommentAuthorDto } from './comment-author.dto';
 
 export const CommentResponseDto = Type.Object({
   comment: Type.Object({
@@ -7,7 +6,12 @@ export const CommentResponseDto = Type.Object({
     body: Type.String(),
     createdAt: Type.String(),
     updatedAt: Type.String(),
-    author: CommentAuthorDto,
+    author: Type.Object({
+      username: Type.String(),
+      bio: Type.String(),
+      image: Type.String(),
+      following: Type.Boolean(),
+    }),
   }),
 });
 

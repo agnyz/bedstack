@@ -77,7 +77,7 @@ export class ProfilesService {
         following:
           currentUserId == null
             ? false
-            : !!user.followers.find(
+            : user.followers.some(
                 (follower) => follower.followerId === currentUserId,
               ),
       },
